@@ -1,217 +1,74 @@
-**Warehouse Management System Design Project**
+## Simple Warehouse Management System
 
-**Objective:**
+### Overview
+Design a simple warehouse management system using **Django** and **Django REST Framework (DRF)**. Users can log in, create and manage their own warehouses, wares, and handle transactions such as buying and selling via REST API. Each user should have access to only their own warehouses and associated data. The system should support different costing methods for wares and provide reporting for warehouse activity and ware valuation.
 
-Create a RESTful API for a simplified Warehouse Management System (WMS) using Django and Django REST Framework (DRF). The API should support:
+### Requirements
 
-1. **Input and Output of Ware**: Adding new products to inventory and removing them when fulfilling orders.
-2. **Inventory Tracking and Stock Management**: Keeping track of stock levels and costs using the Ware model.
-3. **Cost Handling Strategies**: Implement two strategies for calculating inventory costs:
-   - Weighted Mean
-   - FIFO (First In, First Out)
+#### 1. **User Authentication**
+   - Implement user registration and login using DRF’s token authentication.
+   - Each user has their own account and can manage only their data (warehouses, wares, transactions, reports).
+   - Proper access control should ensure that users cannot view or modify data belonging to other users.
 
-**Models Overview:**
+#### 2. **Warehouse Management**
+   - Users can create, update, and delete their own warehouses via REST API endpoints.
+   - Each warehouse belongs to a user, and users can have multiple warehouses.
+   
+#### 3. **Wares (Items) Management**
+   - Users can add, update, and delete wares (items) for each warehouse via the API.
+   - Each ware has a unique name and belongs to a specific warehouse.
+   - Wares must have a defined cost calculation method:
+     - **FIFO** (First In, First Out)
+     - **Weighted Average Cost**
 
-1. **Ware Model:**
-   - Represents an individual product in the warehouse.
-   - Fields:
-     - `id` (AutoField)
-     - `name` (CharField, unique)
-     - `cost_method` (ChoiceField: `weighted_mean`, `fifo`)
+#### 4. **Transaction Management**
+   - Users should be able to manage **purchase orders** and **sales orders** via API:
+     - **Purchase Orders (Input Transactions)**: A record of wares being added to the warehouse. The total cost for a purchase order is calculated as `quantity * price per unit`.
+     - **Sales Orders (Output Transactions)**: A record of wares being removed from the warehouse. The total cost for sales orders is automatically calculated based on the ware’s costing method and prior transactions.
 
-2. **Factor Model:**
-   - Represents a transaction that can be either an input (restock) or output (fulfillment).
-   - Fields:
-     - `id` (AutoField)
-     - `ware` (ForeignKey to Ware)
-     - `quantity` (IntegerField)
-     - `purchase_price` (DecimalField, max_digits=10, decimal_places=2)
-     - `created_at` (DateTimeField, auto_now_add=True)
-     - `type` (ChoiceField: `input`, `output`)
-     - `total_cost` (DecimalField, max_digits=10, decimal_places=2)
+#### 5. **Costing Methods**
+   - **FIFO (First In, First Out)**: When a ware is sold, its cost should be determined based on the oldest available stock first.
+   - **Weighted Average Cost**: The cost of a ware is determined as the average cost of all the stock currently available in the warehouse.
+   - The system should automatically calculate and track the **cost of goods sold (COGS)** for sales orders based on these methods.
 
-**Endpoints Overview:**
+#### 6. **Reports**
+   - **Warehouse Activity Report**:
+     - Show the history of inputs (purchase orders) and outputs (sales orders) for a warehouse.
+     - Include transaction details like quantity and total value for each input and output.
+   - **Ware Valuation Report**:
+     - Show the current quantity and value of each ware in the warehouse.
+     - The value should be calculated according to the ware’s cost method and all previous transactions.
 
-1. **Create a new Ware**
-   - **Endpoint:** `POST /api/wares/`
-   - **Description:** This endpoint allows for the creation of new products in the warehouse inventory.
-   - **Request Body Example:**
-     ```json
-     {
-       "name": "Widget A",
-       "cost_method": "fifo"
-     }
-     ```
-   - **Response:**
-     ```json
-     {
-       "id": 1,
-       "name": "Widget A",
-       "cost_method": "fifo"
-     }
-     ```
+### Constraints and Expectations
+1. The system must be built using **Django** and **DRF** to expose a fully functional REST API.
+2. Use DRF's token authentication for user management and secure access to the API.
+3. Ensure proper database design for efficient transaction management and reporting.
+4. Write unit tests for key functionality, including cost calculations, authentication, and reporting.
+5. No user interface is required—only API endpoints should be implemented.
 
-2. **Add Ware to Inventory (Input Transaction)**
-   - **Endpoint:** `POST /api/inventory/input/`
-   - **Description:** Adds a specified quantity of a ware to the inventory, updating stock levels and cost.
-   - **Request Body Example:**
-     ```json
-     {
-       "ware_id": 1,
-       "quantity": 100,
-       "purchase_price": 20.00
-     }
-     ```
-   - **Response:**
-     ```json
-     {
-       "factor_id": 1,
-       "ware_id": 1,
-       "quantity": 100,
-       "purchase_price": 20.00,
-       "created_at": "2024-10-04T12:34:56Z",
-       "type": "input"
-     }
-     ```
+### Example Scenarios
 
-3. **Remove Ware from Inventory (Output Transaction)**
-   - **Endpoint:** `POST /api/inventory/output/`
-   - **Description:** Removes a specified quantity of ware from inventory to fulfill orders.
-   - **Request Body Example:**
-     ```json
-     {
-       "ware_id": 1,
-       "quantity": 120
-     }
-     ```
-   - **Response:**
-     ```json
-     {
-       "factor_id": 2,
-       "ware_id": 1,
-       "quantity": 120,
-       "total_cost": 2440.00,
-       "created_at": "2024-10-04T13:00:00Z",
-       "type": "output"
-     }
-     ```
+#### Scenario 1: FIFO Costing Method
 
-4. **Get Total Value of Inventory**
-   - **Endpoint:** `GET /api/inventory/valuation/?ware_id=1`
-   - **Description:** Retrieves the total value of inventory for a given ware, considering stock levels and cost method.
-   - **Response:**
-     ```json
-     {
-       "ware_id": 1,
-       "quantity_in_stock": 50,
-       "total_inventory_value": 1250.00
-     }
-     ```
+1. **User A** logs in and creates a warehouse called “Central Warehouse” via the API.
+2. User A adds a ware called “Widget A” with a costing method set to FIFO.
+3. User A creates a purchase order to add **60 units of Widget A** at a price of **$10/unit**.
+4. Later, User A creates another purchase order for **50 units of Widget A** at a price of **$12/unit**.
+5. User A creates a sales order to sell **80 units of Widget A**. The system should calculate the cost of the sale using FIFO:
+   - 60 units at $10/unit
+   - 20 units at $12/unit
+   - Total cost for the sale is `(60 * $10) + (20 * $12) = $600 + $240 = $840`.
+6. User A generates a warehouse activity report, showing both purchase and sales orders, and a ware valuation report showing the remaining **30 units** of Widget A valued at **$12/unit**.
 
-**Example Input and Output:**
+#### Scenario 2: Weighted Average Cost Method
 
-**Adding Wares:**
-1. **Creating a new Ware:**
-   - **API Call:** `POST /api/wares/`
-   - **Request Body:**
-     ```json
-     {
-       "name": "Widget A",
-       "cost_method": "fifo"
-     }
-     ```
-   - **Response:**
-     ```json
-     {
-       "id": 1,
-       "name": "Widget A",
-       "cost_method": "fifo"
-     }
-     ```
-
-**Input Transactions:**
-1. **Input Ware for Widget A:**
-   - **API Call:** `POST /api/inventory/input/`
-   - **Request Body:**
-     ```json
-     {
-       "ware_id": 1,
-       "quantity": 100,
-       "purchase_price": 20.00
-     }
-     ```
-   - **Response:**
-     ```json
-     {
-       "factor_id": 1,
-       "ware_id": 1,
-       "quantity": 100,
-       "purchase_price": 20.00,
-       "created_at": "2024-10-04T12:34:56Z",
-       "type": "input"
-     }
-     ```
-
-**Output Transactions:**
-1. **Output Ware for Widget A:**
-   - **API Call:** `POST /api/inventory/output/`
-   - **Request Body:**
-     ```json
-     {
-       "ware_id": 1,
-       "quantity": 120
-     }
-     ```
-   - **Response:**
-     ```json
-     {
-       "factor_id": 2,
-       "ware_id": 1,
-       "quantity": 120,
-       "total_cost": 2440.00,
-       "created_at": "2024-10-04T13:00:00Z",
-       "type": "output"
-     }
-     ```
-
-- **FIFO Cost Calculation Example:**
-  First, 100 units @ $20.00 = $2000.00  
-  Then, 20 units @ $22.00 = $440.00  
-  **Total Cost:**  
-  100 * 20.00 + 20 * 22.00 = 2440.00
-
-**Total Inventory Valuation:**
-1. **Valuation Request:**
-   - **API Call:** `GET /api/inventory/valuation/?ware_id=1`
-   - **Response:**
-     ```json
-     {
-       "ware_id": 1,
-       "quantity_in_stock": 50,
-       "total_inventory_value": 1250.00
-     }
-     ```
-
-**Business Logic:**
-
-1. **Weighted Mean Calculation:**
-   - Calculate the average cost of inventory using the formula:
-     ```plaintext
-     New Average Cost = (Total Cost of Current Stock + Total Cost of New Batch) / Total Quantity in Stock
-     ```
-
-2. **FIFO Calculation:**
-   - Remove products from inventory starting with the oldest batches first until the requested quantity is fulfilled.
-   - Keep track of costs by summing up the costs of the removed transactions.
-
-**Testing Requirements:**
-
-- Implement unit tests for:
-  - CRUD operations for Ware and Factor.
-  - Input and Output transactions with various edge cases (e.g., insufficient stock).
-  - Cost calculations for both `weighted_mean` and `fifo`.
-- Use Django’s built-in `TestCase` and `APIClient` for testing.
-
-**Documentation:**
-
-- Create a README file with instructions on setting up the environment, running tests, and making API calls.
+1. **User B** logs in and creates a warehouse called “North Warehouse.”
+2. User B adds a ware called “Widget B” with a costing method set to **Weighted Average Cost**.
+3. User B creates a purchase order for **100 units of Widget B** at a price of **$15/unit**.
+4. Later, User B creates another purchase order for **50 units of Widget B** at a price of **$20/unit**.
+5. The weighted average cost of Widget B is calculated as:
+   - Total value of inventory: `(100 * $15) + (50 * $20) = $1500 + $1000 = $2500`.
+   - Total units: `100 + 50 = 150 units`.
+   - Weighted average cost: `$2500 / 150 = $16.67/unit`.
+6. User B creates a sales order to sell **80 units of Widget B**. The total cost of the sale is `80 * $16.67 = $1333.60`.
+7. User B generates a ware valuation report showing the remaining **70 units** of Widget B valued at **$16.67/unit**.
