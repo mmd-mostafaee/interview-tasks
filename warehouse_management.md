@@ -72,3 +72,9 @@ Design a simple warehouse management system using **Django** and **Django REST F
    - Weighted average cost: `$2500 / 150 = $16.67/unit`.
 6. User B creates a sales order to sell **80 units of Widget B**. The total cost of the sale is `80 * $16.67 = $1333.60`.
 7. User B generates a ware valuation report showing the remaining **70 units** of Widget B valued at **$16.67/unit**.
+
+
+---
+
+### Important Note:
+For this task, **AI tools are not permitted**. The solution should be written and implemented manually by the candidate.
